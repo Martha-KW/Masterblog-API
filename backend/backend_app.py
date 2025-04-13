@@ -5,20 +5,25 @@ from flask_limiter.util import get_remote_address
 from api_v1 import v1
 from backend.storage import load_posts, save_posts  # <--- NEU
 
+# Initializes the flask app
 app = Flask(__name__)
 
+# Enables CORS for all routes in the API
 CORS(app, methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
+# Limits the rate of requests at max. 5 in a minute for each IP adress
 limiter = Limiter(
     get_remote_address,
     app=app,
     default_limits=["5 per minute"]
 )
 
+# Register API v1 blueprint
 app.register_blueprint(v1)
 
 @app.route("/api/posts", methods=["GET"])
 def get_posts():
+    """Gets all posts with optional sorting."""
     sort_field = request.args.get("sort")
     direction = request.args.get("direction")
 
@@ -26,6 +31,7 @@ def get_posts():
     valid_directions = ["asc", "desc"]
 
     posts = load_posts()
+    # protects the original order
     sorted_posts = posts.copy()
 
     if sort_field:
@@ -47,12 +53,14 @@ def get_posts():
 
 @app.route('/api/posts', methods=['POST'])
 def add_post():
+    """Creates a new post and needs title AND content"""
     data = request.get_json()
 
     if not data.get('title') or not data.get('content'):
         return jsonify({"error": "Title and content are required"}), 400
 
     posts = load_posts()
+    # creates basic post ID, needs to be refined for real world use
     new_id = len(posts) + 1
     new_post = {
         "id": new_id,
@@ -68,6 +76,7 @@ def add_post():
 
 @app.route('/api/posts/<int:id>', methods=['DELETE'])
 def delete_post(id):
+    """Deletes a post by its ID"""
     posts = load_posts()
 
     post_to_delete = next((post for post in posts if post["id"] == id), None)
@@ -82,6 +91,7 @@ def delete_post(id):
 
 @app.route('/api/posts/<int:id>', methods=['PUT'])
 def update_post(id):
+    """Updates an existing post, partially or fully"""
     posts = load_posts()
 
     post_to_update = next((post for post in posts if post["id"] == id), None)
@@ -100,6 +110,7 @@ def update_post(id):
 
 @app.route('/api/posts/search', methods=['GET'])
 def search_posts():
+    """Case insensitive search vor post with keywords in title and / or content"""
     title_query = request.args.get('title', '').lower()
     content_query = request.args.get('content', '').lower()
 

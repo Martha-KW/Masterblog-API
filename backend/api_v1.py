@@ -2,12 +2,14 @@ from flask import Blueprint, jsonify, request
 from flask_cors import CORS
 from backend.storage import load_posts, save_posts  # <--- NEU
 
+# API Version number 1
 v1 = Blueprint('v1', __name__, url_prefix='/api/v1')
 
 CORS(v1, methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 @v1.route("/posts", methods=["GET"])
 def get_posts():
+    """Gets all posts with the option of sorting."""
     sort_field = request.args.get("sort")
     direction = request.args.get("direction")
 
@@ -35,6 +37,7 @@ def get_posts():
 
 @v1.route('/posts', methods=['POST'])
 def add_post():
+    """Creates a new post. Title AND Content are required here."""
     data = request.get_json()
 
     if not data.get('title') or not data.get('content'):
@@ -57,6 +60,7 @@ def add_post():
 
 @v1.route('/posts/<int:id>', methods=['DELETE'])
 def delete_post(id):
+    """Deletes a post you choose by its unique ID"""
     posts = load_posts()
     post_to_delete = next((post for post in posts if post["id"] == id), None)
 
@@ -70,6 +74,7 @@ def delete_post(id):
 
 @v1.route('/posts/<int:id>', methods=['PUT'])
 def update_post(id):
+    """Updates an existing post partially or completly."""
     posts = load_posts()
     post_to_update = next((post for post in posts if post["id"] == id), None)
 
@@ -86,6 +91,7 @@ def update_post(id):
 
 @v1.route('/posts/search', methods=['GET'])
 def search_posts():
+    """Searches a post via keywords in title and / or content. Not case sensitive."""
     title_query = request.args.get('title', '').lower()
     content_query = request.args.get('content', '').lower()
 
