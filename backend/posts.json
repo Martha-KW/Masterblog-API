@@ -28,5 +28,10 @@
     "id": 6,
     "title": "test title",
     "content": "test content"
+  },
+  {
+    "id": 7,
+    "title": "blinking test",
+    "content": "it is blinking"
   }
 ]

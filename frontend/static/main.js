@@ -64,3 +64,10 @@ function deletePost(postId) {
     })
     .catch(error => console.error('Error:', error));
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+  const addButton = document.querySelector("#add-post-button");
+  if (addButton) {
+    addButton.classList.add("blink");
+  }
+});
