@@ -1,26 +1,13 @@
-from flask import Flask, jsonify, request
-from flask_cors import CORS
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from api_v1 import v1
+from flask import Blueprint, jsonify, request
 
-app = Flask(__name__)
-CORS(app, methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
-limiter = Limiter(
-    get_remote_address,
-    app=app,
-    default_limits=["5 per minute"]  # z.B. 10 Requests pro Minute pro IP
-)
-
-app.register_blueprint(v1)
+v1 = Blueprint('v1', __name__, url_prefix='/api/v1')
 
 POSTS = [
     {"id": 1, "title": "First post", "content": "This is the first post."},
     {"id": 2, "title": "Second post", "content": "This is the second post."},
 ]
 
-
-@app.route("/api/posts", methods=["GET"])
+@v1.route("/posts", methods=["GET"])
 def get_posts():
     sort_field = request.args.get("sort")
     direction = request.args.get("direction")
@@ -28,15 +15,13 @@ def get_posts():
     valid_fields = ["title", "content"]
     valid_directions = ["asc", "desc"]
 
-    # Copy original POSTS so we don't change the global state
     sorted_posts = POSTS.copy()
 
     if sort_field:
         if sort_field not in valid_fields:
             return jsonify({
-                               "error": f"Invalid sort field '{sort_field}'. Must be 'title' or 'content'."}), 400
+                "error": f"Invalid sort field '{sort_field}'. Must be 'title' or 'content'."}), 400
 
-        # Default direction is ascending
         reverse = False
         if direction:
             if direction not in valid_directions:
@@ -44,13 +29,12 @@ def get_posts():
                     {"error": f"Invalid direction '{direction}'. Must be 'asc' or 'desc'."}), 400
             reverse = (direction == "desc")
 
-        # Perform sorting
         sorted_posts.sort(key=lambda post: post[sort_field].lower(), reverse=reverse)
 
     return jsonify(sorted_posts)
 
 
-@app.route('/api/posts', methods=['POST'])
+@v1.route('/posts', methods=['POST'])
 def add_post():
     data = request.get_json()
 
@@ -68,9 +52,8 @@ def add_post():
     return jsonify(new_post), 201
 
 
-@app.route('/api/posts/<int:id>', methods=['DELETE'])
+@v1.route('/posts/<int:id>', methods=['DELETE'])
 def delete_post(id):
-
     global POSTS
     post_to_delete = next((post for post in POSTS if post["id"] == id), None)
 
@@ -81,7 +64,7 @@ def delete_post(id):
         return jsonify({"message": "Post not found."}), 404
 
 
-@app.route('/api/posts/<int:id>', methods=['PUT'])
+@v1.route('/posts/<int:id>', methods=['PUT'])
 def update_post(id):
     post_to_update = next((post for post in POSTS if post["id"] == id), None)
 
@@ -96,12 +79,11 @@ def update_post(id):
     return jsonify(post_to_update), 200
 
 
-@app.route('/api/posts/search', methods=['GET'])
+@v1.route('/posts/search', methods=['GET'])
 def search_posts():
     title_query = request.args.get('title', '').lower()
     content_query = request.args.get('content', '').lower()
 
-    # Wenn KEIN title und KEIN content angegeben ist, gib leere Liste zurück
     if not title_query and not content_query:
         return jsonify([])
 
@@ -112,8 +94,3 @@ def search_posts():
     ]
 
     return jsonify(filtered_posts)
-
-
-
-if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5002, debug=True)
