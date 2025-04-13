@@ -1,11 +1,10 @@
 from flask import Blueprint, jsonify, request
+from flask_cors import CORS
+from backend.storage import load_posts, save_posts  # <--- NEU
 
 v1 = Blueprint('v1', __name__, url_prefix='/api/v1')
 
-POSTS = [
-    {"id": 1, "title": "First post", "content": "This is the first post."},
-    {"id": 2, "title": "Second post", "content": "This is the second post."},
-]
+CORS(v1, methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 @v1.route("/posts", methods=["GET"])
 def get_posts():
@@ -15,7 +14,7 @@ def get_posts():
     valid_fields = ["title", "content"]
     valid_directions = ["asc", "desc"]
 
-    sorted_posts = POSTS.copy()
+    posts = load_posts()
 
     if sort_field:
         if sort_field not in valid_fields:
@@ -29,9 +28,9 @@ def get_posts():
                     {"error": f"Invalid direction '{direction}'. Must be 'asc' or 'desc'."}), 400
             reverse = (direction == "desc")
 
-        sorted_posts.sort(key=lambda post: post[sort_field].lower(), reverse=reverse)
+        posts.sort(key=lambda post: post[sort_field].lower(), reverse=reverse)
 
-    return jsonify(sorted_posts)
+    return jsonify(posts)
 
 
 @v1.route('/posts', methods=['POST'])
@@ -41,24 +40,29 @@ def add_post():
     if not data.get('title') or not data.get('content'):
         return jsonify({"error": "Title and content are required"}), 400
 
-    new_id = len(POSTS) + 1
+    posts = load_posts()
+    new_id = max([post["id"] for post in posts], default=0) + 1
+
     new_post = {
         "id": new_id,
         "title": data["title"],
         "content": data["content"]
     }
 
-    POSTS.append(new_post)
+    posts.append(new_post)
+    save_posts(posts)
+
     return jsonify(new_post), 201
 
 
 @v1.route('/posts/<int:id>', methods=['DELETE'])
 def delete_post(id):
-    global POSTS
-    post_to_delete = next((post for post in POSTS if post["id"] == id), None)
+    posts = load_posts()
+    post_to_delete = next((post for post in posts if post["id"] == id), None)
 
     if post_to_delete:
-        POSTS.remove(post_to_delete)
+        posts.remove(post_to_delete)
+        save_posts(posts)
         return jsonify({"message": f"Post with id {id} has been deleted successfully."}), 200
     else:
         return jsonify({"message": "Post not found."}), 404
@@ -66,16 +70,17 @@ def delete_post(id):
 
 @v1.route('/posts/<int:id>', methods=['PUT'])
 def update_post(id):
-    post_to_update = next((post for post in POSTS if post["id"] == id), None)
+    posts = load_posts()
+    post_to_update = next((post for post in posts if post["id"] == id), None)
 
     if not post_to_update:
         return jsonify({"message": "Post not found"}), 404
 
     data = request.get_json()
-
     post_to_update["title"] = data.get("title", post_to_update["title"])
     post_to_update["content"] = data.get("content", post_to_update["content"])
 
+    save_posts(posts)
     return jsonify(post_to_update), 200
 
 
@@ -87,8 +92,10 @@ def search_posts():
     if not title_query and not content_query:
         return jsonify([])
 
+    posts = load_posts()
+
     filtered_posts = [
-        post for post in POSTS
+        post for post in posts
         if (title_query and title_query in post['title'].lower()) or
            (content_query and content_query in post['content'].lower())
     ]

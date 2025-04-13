@@ -3,22 +3,19 @@ from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from api_v1 import v1
+from backend.storage import load_posts, save_posts  # <--- NEU
 
 app = Flask(__name__)
+
 CORS(app, methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+
 limiter = Limiter(
     get_remote_address,
     app=app,
-    default_limits=["5 per minute"]  # z.B. 10 Requests pro Minute pro IP
+    default_limits=["5 per minute"]
 )
 
 app.register_blueprint(v1)
-
-POSTS = [
-    {"id": 1, "title": "First post", "content": "This is the first post."},
-    {"id": 2, "title": "Second post", "content": "This is the second post."},
-]
-
 
 @app.route("/api/posts", methods=["GET"])
 def get_posts():
@@ -28,15 +25,14 @@ def get_posts():
     valid_fields = ["title", "content"]
     valid_directions = ["asc", "desc"]
 
-    # Copy original POSTS so we don't change the global state
-    sorted_posts = POSTS.copy()
+    posts = load_posts()
+    sorted_posts = posts.copy()
 
     if sort_field:
         if sort_field not in valid_fields:
             return jsonify({
-                               "error": f"Invalid sort field '{sort_field}'. Must be 'title' or 'content'."}), 400
+                "error": f"Invalid sort field '{sort_field}'. Must be 'title' or 'content'."}), 400
 
-        # Default direction is ascending
         reverse = False
         if direction:
             if direction not in valid_directions:
@@ -44,7 +40,6 @@ def get_posts():
                     {"error": f"Invalid direction '{direction}'. Must be 'asc' or 'desc'."}), 400
             reverse = (direction == "desc")
 
-        # Perform sorting
         sorted_posts.sort(key=lambda post: post[sort_field].lower(), reverse=reverse)
 
     return jsonify(sorted_posts)
@@ -57,25 +52,29 @@ def add_post():
     if not data.get('title') or not data.get('content'):
         return jsonify({"error": "Title and content are required"}), 400
 
-    new_id = len(POSTS) + 1
+    posts = load_posts()
+    new_id = len(posts) + 1
     new_post = {
         "id": new_id,
         "title": data["title"],
         "content": data["content"]
     }
 
-    POSTS.append(new_post)
+    posts.append(new_post)
+    save_posts(posts)
+
     return jsonify(new_post), 201
 
 
 @app.route('/api/posts/<int:id>', methods=['DELETE'])
 def delete_post(id):
+    posts = load_posts()
 
-    global POSTS
-    post_to_delete = next((post for post in POSTS if post["id"] == id), None)
+    post_to_delete = next((post for post in posts if post["id"] == id), None)
 
     if post_to_delete:
-        POSTS.remove(post_to_delete)
+        posts.remove(post_to_delete)
+        save_posts(posts)
         return jsonify({"message": f"Post with id {id} has been deleted successfully."}), 200
     else:
         return jsonify({"message": "Post not found."}), 404
@@ -83,15 +82,18 @@ def delete_post(id):
 
 @app.route('/api/posts/<int:id>', methods=['PUT'])
 def update_post(id):
-    post_to_update = next((post for post in POSTS if post["id"] == id), None)
+    posts = load_posts()
+
+    post_to_update = next((post for post in posts if post["id"] == id), None)
 
     if not post_to_update:
         return jsonify({"message": "Post not found"}), 404
 
     data = request.get_json()
-
     post_to_update["title"] = data.get("title", post_to_update["title"])
     post_to_update["content"] = data.get("content", post_to_update["content"])
+
+    save_posts(posts)
 
     return jsonify(post_to_update), 200
 
@@ -101,18 +103,18 @@ def search_posts():
     title_query = request.args.get('title', '').lower()
     content_query = request.args.get('content', '').lower()
 
-    # Wenn KEIN title und KEIN content angegeben ist, gib leere Liste zurück
     if not title_query and not content_query:
         return jsonify([])
 
+    posts = load_posts()
+
     filtered_posts = [
-        post for post in POSTS
+        post for post in posts
         if (title_query and title_query in post['title'].lower()) or
            (content_query and content_query in post['content'].lower())
     ]
 
     return jsonify(filtered_posts)
-
 
 
 if __name__ == '__main__':

@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "title": "First post",
+    "content": "This is the first post."
+  },
+  {
+    "id": 2,
+    "title": "Second post",
+    "content": "This is the second post."
+  },
+  {
+    "id": 3,
+    "title": "third post",
+    "content": "This is the third post."
+  },
+  {
+    "id": 4,
+    "title": "Fourth post",
+    "content": "This is the fourth post."
+  },
+  {
+    "id": 5,
+    "title": "Updated Title",
+    "content": "Updated content for the post."
+  },
+  {
+    "id": 6,
+    "title": "test title",
+    "content": "test content"
+  }
+]
