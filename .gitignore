@@ -1,0 +1,36 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+venv/
+
+# IDEs
+.idea/
+.vscode/
+
+# Mac OS
+.DS_Store
+
+# Codio und andere Lernplattform-Dateien
+.guides/
+.settings/
+.codio
+
+# Node.js (falls du im frontend npm oder yarn benutzt)
+node_modules/
+dist/
+
+# Environment files
+.env
+
+# Logfiles
+*.log
+
+# Python egg info
+*.egg-info/
+
+# Frontend build artefacts
+frontend/build/
