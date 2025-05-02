@@ -60,8 +60,13 @@ def add_post():
         return jsonify({"error": "Title and content are required"}), 400
 
     posts = load_posts()
-    # creates basic post ID, needs to be refined for real world use
-    new_id = len(posts) + 1
+
+    # refined robust ID generation
+    existing_ids = [post['id'] for post in posts]
+    new_id = 1
+    while new_id in existing_ids:
+        new_id += 1
+
     new_post = {
         "id": new_id,
         "title": data["title"],
